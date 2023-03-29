@@ -1,0 +1,7 @@
+; To use this configure file, you need to fill the following fields and rename this file to config.ini
+
+[database]
+host =
+user =
+password =
+database =
