@@ -1,67 +1,47 @@
-import pymysql
+from pprint import pprint
+from typing import List, Tuple, Dict
+
 from flask import Blueprint, render_template, request
-import configparser
+
+from database import CONNECTION_POOL
 
 # 创建一个名为login_bp的蓝图
 login_bp = Blueprint('login', __name__)
 
 
-def login_sql_query(username, password):
+def login_sql_query(username, password) -> List[Dict[str, str, str]]:
     """
-    连接MySQL数据库，并执行查询操作，查询是否有对应的用户名和密码。
+    从数据库中查询用户名和密码，并返回查询结果。
 
-    Args:
-        username (str): 用户名字符串。
-        password (str): 密码字符串。
-
-    Returns:
-        result (tuple): 查询结果。如果查询成功，返回一个元组对象，每个元素代表查询的记录行（一条记录是一个元组）；否则返回一个空元组()。
+    :param username: 包含用户名的字符串。
+    :param password: 包含密码的字符串。
+    :return: 包含查询结果的列表，其元素为字典，每个字典包含三个值：{'id', 'username', 'password'}。
+    :raises: 若在执行查询时发生异常，则会抛出相关的异常。
     """
-    # 读取配置文件中的数据库连接信息
-    config = configparser.ConfigParser()
-    config.read('backend/source codes/config.ini')
+    # 从连接池中获取一个数据库连接
+    with CONNECTION_POOL.get_connection() as conn:
+        # 获取数据库游标
+        with conn.cursor() as cursor:
+            # 执行查询
+            sql = "SELECT student_id AS id, username, password FROM student WHERE username = %s AND password = %s UNION " \
+                  "SELECT staff_id AS id, username, password FROM teacher WHERE username = %s AND password = %s"
+            val = (username, password, username, password)
+            cursor.execute(sql, val)
 
-    database_host = config.get('database', 'host')
-    database_user = config.get('database', 'user')
-    database_password = config.get('database', 'password')
-    database_database = config.get('database', 'database')
-
-    # 连接MySQL数据库
-    mydb = pymysql.connect(
-        host=database_host,
-        user=database_user,
-        password=database_password,
-        database=database_database
-    )
-
-    # 获取数据库游标
-    mycursor = mydb.cursor()
-
-    # 执行查询
-    sql = "SELECT student_id, username, password FROM student WHERE username = %s AND password = %s UNION " \
-          "SELECT staff_id, username, password FROM teacher WHERE username = %s AND password = %s"
-    val = (username, password, username, password)
-    mycursor.execute(sql, val)
-
-    # 获取查询结果
-    result = mycursor.fetchall()
-
-    # 关闭数据库连接
-    mycursor.close()
-    mydb.close()
+            # 获取查询结果
+            result = cursor.fetchall()
 
     return result
 
 
-def get_user_type(user_id):
+def get_user_type(user_id) -> str:
     """
-    根据用户ID判断用户类型，返回用户类型。
+    获取用户类型。
 
-    Args:
-        user_id (str): 用户ID字符串。
+    根据给定的用户 ID，返回相应的用户类型。
 
-    Returns:
-        user_type (str): 用户类型字符串。如果用户ID以'0100'开始，则为'admin'；如果以'01'开始，则为'teacher'；如果以'11'开始，则为'student'；否则返回'unknown'。
+    :param user_id: 包含用户 ID 的字符串。
+    :return: 包含用户类型的字符串，可能的取值为 'admin'、'teacher'、'student' 或 'unknown'。
     """
     if user_id == '0100':
         return 'admin'
@@ -89,7 +69,8 @@ def login():
     result = login_sql_query(username, password)
     if len(result) > 0:
         # 登录成功，可以根据不同角色进行不同操作
-        role = get_user_type(result[0][0])
+        pprint(result)
+        role = get_user_type(result[0]['id'])
         if role == 'student':
             return '欢迎登录学生账户'
         elif role == 'teacher':
