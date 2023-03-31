@@ -2,6 +2,7 @@
 
 [database]
 host =
+port = 3006
 user =
 password =
 database =
