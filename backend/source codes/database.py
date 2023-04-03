@@ -69,14 +69,3 @@ class ConnectionPool:
         else:
             raise FileNotFoundError('config.ini not found')
             return None
-
-
-config = ConnectionPool.get_database_config()
-database_host = config['host']
-database_port = int(config['port'])
-database_user = config['user']
-database_password = config['password']
-database_database = config['database_name']
-
-CONNECTION_POOL = ConnectionPool(host=database_host, port=database_port, user=database_user, password=database_password,
-                                 database_name=database_database)

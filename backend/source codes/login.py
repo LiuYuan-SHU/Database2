@@ -1,15 +1,13 @@
-from pprint import pprint
-from typing import List, Tuple, Dict
-
 from flask import Blueprint, render_template, request
 
-from database import CONNECTION_POOL
+from system import system
+from person import Person
 
 # 创建一个名为login_bp的蓝图
 login_bp = Blueprint('login', __name__)
 
 
-def login_sql_query(username, password) -> List[Dict[str, str, str]]:
+def login_sql_query(username, password):
     """
     从数据库中查询用户名和密码，并返回查询结果。
 
@@ -19,7 +17,7 @@ def login_sql_query(username, password) -> List[Dict[str, str, str]]:
     :raises: 若在执行查询时发生异常，则会抛出相关的异常。
     """
     # 从连接池中获取一个数据库连接
-    with CONNECTION_POOL.get_connection() as conn:
+    with system.get_database_connection() as conn:
         # 获取数据库游标
         with conn.cursor() as cursor:
             # 执行查询
@@ -69,8 +67,9 @@ def login():
     result = login_sql_query(username, password)
     if len(result) > 0:
         # 登录成功，可以根据不同角色进行不同操作
-        pprint(result)
-        role = get_user_type(result[0]['id'])
+        user_id = result[0]['id']
+        role = get_user_type(user_id)
+        system.set_person_info(Person(user_id=user_id, user_name=username, password=password, user_type=role))
         if role == 'student':
             return '欢迎登录学生账户'
         elif role == 'teacher':
